@@ -64,3 +64,12 @@ export function ageFrom(iso: string | undefined): string {
 export function uid(): string {
   return crypto.randomUUID()
 }
+
+/** CSS colour var for a due date by urgency: overdue → danger, ≤7d → warn. */
+export function dueColor(iso: string | undefined): string {
+  const n = daysUntil(iso)
+  if (n === null) return 'var(--ink-faint)'
+  if (n < 0) return 'var(--danger)'
+  if (n <= 7) return 'var(--warn)'
+  return 'var(--ink-faint)'
+}

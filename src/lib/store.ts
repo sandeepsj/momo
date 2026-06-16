@@ -18,6 +18,21 @@ export { AuthExpiredError }
 export function normalize(p: Partial<Pet>): Pet {
   const now = p.updatedAt ?? new Date().toISOString()
   const species: Species = p.species ?? 'other'
+  // Migrate the old single `doctor` into the `vets[]` list (first = primary).
+  const vets =
+    p.vets && p.vets.length > 0
+      ? p.vets
+      : p.doctor && (p.doctor.name || p.doctor.clinic || p.doctor.phone)
+        ? [
+            {
+              id: crypto.randomUUID(),
+              name: p.doctor.name ?? '',
+              clinic: p.doctor.clinic ?? '',
+              phone: p.doctor.phone ?? '',
+              address: p.doctor.address ?? '',
+            },
+          ]
+        : []
   return {
     id: p.id ?? crypto.randomUUID(),
     version: p.version ?? 1,
@@ -32,7 +47,7 @@ export function normalize(p: Partial<Pet>): Pet {
     adoptionDate: p.adoptionDate ?? '',
     avatarFileId: p.avatarFileId,
     story: p.story ?? '',
-    doctor: { name: '', clinic: '', phone: '', address: '', notes: '', ...(p.doctor ?? {}) },
+    vets,
     food: {
       brands: [],
       likes: [],

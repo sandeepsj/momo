@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import { usePets } from '@/context/PetProvider'
-import { Modal } from '@/components/ui'
-import { fmtDate, toDateInput, fromDateInput, relativeDue, daysUntil, uid } from '@/lib/format'
+import { Modal, ModalActions } from '@/components/ui'
+import { Icon, kindMeta } from '@/components/icons'
+import { fmtDateShort, relativeDue, dueColor, toDateInput, fromDateInput, uid } from '@/lib/format'
 import type { Reminder, ReminderKind } from '@/types'
 
-const KINDS: { value: ReminderKind; label: string; emoji: string }[] = [
-  { value: 'vaccination', label: 'Vaccination', emoji: '💉' },
-  { value: 'deworming', label: 'Deworming', emoji: '🪱' },
-  { value: 'tick-flea', label: 'Tick & flea', emoji: '🐜' },
-  { value: 'grooming', label: 'Grooming', emoji: '✂️' },
-  { value: 'vet-checkup', label: 'Vet check-up', emoji: '🩺' },
-  { value: 'custom', label: 'Custom', emoji: '⏰' },
+const KIND_OPTIONS: { value: ReminderKind; label: string }[] = [
+  { value: 'vaccination', label: 'Vaccination' },
+  { value: 'deworming', label: 'Deworming' },
+  { value: 'tick-flea', label: 'Tick & flea' },
+  { value: 'grooming', label: 'Grooming' },
+  { value: 'vet-checkup', label: 'Vet check-up' },
+  { value: 'custom', label: 'Custom' },
 ]
-const emojiFor = (k: ReminderKind) => KINDS.find((x) => x.value === k)?.emoji ?? '⏰'
 
-function addDays(iso: string, days: number): string {
-  const d = new Date(iso)
+interface Draft { id: string; kind: ReminderKind; title: string; dueDate: string; recur: string; notes: string }
+
+function addDays(days: number): string {
+  const d = new Date()
   d.setDate(d.getDate() + days)
   return d.toISOString()
 }
@@ -23,71 +25,61 @@ function addDays(iso: string, days: number): string {
 export default function Reminders() {
   const { current, mutate } = usePets()
   const pet = current!.pet
-  const [editing, setEditing] = useState<Reminder | null>(null)
-  const [isNew, setIsNew] = useState(false)
+  const [modal, setModal] = useState<{ isNew: boolean; draft: Draft } | null>(null)
 
   const open = pet.reminders.filter((r) => !r.done).sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))
-  const done = pet.reminders.filter((r) => r.done).sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1))
+  const done = pet.reminders.filter((r) => r.done)
 
-  const startNew = () => {
-    setEditing({ id: uid(), kind: 'custom', title: '', dueDate: new Date().toISOString(), recurrenceDays: undefined, done: false, notes: '' })
-    setIsNew(true)
-  }
+  const complete = (r: Reminder) => mutate((p) => ({ ...p, reminders: p.reminders.map((x) => (x.id !== r.id ? x : r.recurrenceDays ? { ...x, dueDate: addDays(r.recurrenceDays) } : { ...x, done: true })) }))
+  const reopen = (id: string) => mutate((p) => ({ ...p, reminders: p.reminders.map((x) => (x.id === id ? { ...x, done: false } : x)) }))
+  const remove = (id: string) => mutate((p) => ({ ...p, reminders: p.reminders.filter((x) => x.id !== id) }))
+
+  const startNew = () => setModal({ isNew: true, draft: { id: uid(), kind: 'custom', title: '', dueDate: addDays(0), recur: '', notes: '' } })
+  const startEdit = (r: Reminder) => setModal({ isNew: false, draft: { id: r.id, kind: r.kind, title: r.title, dueDate: r.dueDate, recur: r.recurrenceDays ? String(r.recurrenceDays) : '', notes: r.notes } })
+  const patch = (p: Partial<Draft>) => setModal((m) => (m ? { ...m, draft: { ...m.draft, ...p } } : m))
   const save = () => {
-    if (!editing || !editing.title.trim()) return
-    mutate((p) => ({
-      ...p,
-      reminders: isNew ? [...p.reminders, editing] : p.reminders.map((r) => (r.id === editing.id ? editing : r)),
-    }))
-    setEditing(null)
+    if (!modal || !modal.draft.title.trim()) return
+    const d = modal.draft
+    const rem: Reminder = { id: d.id, kind: d.kind, title: d.title, dueDate: d.dueDate, recurrenceDays: d.recur ? Number(d.recur) : undefined, done: false, notes: d.notes }
+    mutate((p) => ({ ...p, reminders: modal.isNew ? [...p.reminders, rem] : p.reminders.map((x) => (x.id === rem.id ? { ...x, ...rem } : x)) }))
+    setModal(null)
   }
-  const remove = (id: string) => mutate((p) => ({ ...p, reminders: p.reminders.filter((r) => r.id !== id) }))
-
-  // Mark done: recurring ones roll forward and stay open; one-offs get archived.
-  const complete = (r: Reminder) =>
-    mutate((p) => ({
-      ...p,
-      reminders: p.reminders.map((x) =>
-        x.id !== r.id
-          ? x
-          : r.recurrenceDays
-            ? { ...x, dueDate: addDays(new Date().toISOString(), r.recurrenceDays) }
-            : { ...x, done: true },
-      ),
-    }))
-  const reopen = (id: string) => mutate((p) => ({ ...p, reminders: p.reminders.map((r) => (r.id === id ? { ...r, done: false } : r)) }))
 
   return (
-    <div className="page">
-      <div className="page-head">
+    <>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 22, animation: 'rise .5s both' }}>
         <div>
-          <h1>⏰ Reminders</h1>
-          <p className="sub">Vaccines, deworming, tick spots & more — never miss one.</p>
+          <h1 className="h1">Care <span className="hl">reminders</span></h1>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Vaccines, deworming, tick spots &amp; more — never miss one.</p>
         </div>
-        <div className="spacer" />
         <button className="btn primary" onClick={startNew}>＋ Add reminder</button>
       </div>
 
-      <div className="list">
-        {open.length === 0 && <div className="card empty"><div className="big">✅</div><p>All caught up!</p></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {open.length === 0 && (
+          <div className="card" style={{ padding: 46, textAlign: 'center', animation: 'pop .4s both' }}>
+            <div style={{ color: 'var(--ok)', display: 'flex', justifyContent: 'center' }}><Icon name="check" size={42} sw={1.7} /></div>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 18, color: 'var(--ink-soft)', margin: '8px 0 0' }}>All caught up!</p>
+          </div>
+        )}
         {open.map((r) => {
-          const d = daysUntil(r.dueDate)
-          const cls = d !== null && d < 0 ? 'due-over' : d !== null && d <= 7 ? 'due-soon' : 'faint'
+          const km = kindMeta(r.kind)
+          const soft = `color-mix(in srgb, ${km.color} 16%, transparent)`
           return (
-            <div className="card item" key={r.id}>
-              <button className="btn ghost sm" title="Mark done" onClick={() => complete(r)} style={{ fontSize: '1.1rem' }}>⬜</button>
-              <div className="body">
-                <b>{emojiFor(r.kind)} {r.title}</b>
-                <span className={cls} style={{ fontSize: '0.85rem', fontWeight: 700 }}>
-                  due {fmtDate(r.dueDate)} · {relativeDue(r.dueDate)}
-                  {r.recurrenceDays ? ` · every ${r.recurrenceDays}d` : ''}
-                </span>
-                {r.notes && <p className="muted" style={{ fontSize: '0.88rem' }}>{r.notes}</p>}
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--card)', border: '1.5px solid var(--line)', borderLeft: `5px solid ${km.color}`, borderRadius: 20, padding: '15px 18px', boxShadow: 'var(--shadow-sm)', animation: 'rise .45s both' }}>
+              <button onClick={() => complete(r)} title="Mark done" style={{ width: 28, height: 28, borderRadius: '50%', border: '2.5px solid var(--line-strong)', background: 'transparent', cursor: 'pointer', flexShrink: 0, transition: 'all .15s' }} onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--ok)')} onMouseOut={(e) => (e.currentTarget.style.borderColor = 'var(--line-strong)')} />
+              <span style={{ width: 38, height: 38, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center', background: soft, color: km.color, transform: 'rotate(-5deg)' }}><Icon name={km.icon} size={18} /></span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 17 }}>{r.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 3, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 999, background: soft, color: km.color }}>{km.label}</span>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, color: dueColor(r.dueDate) }}>due {fmtDateShort(r.dueDate)} · {relativeDue(r.dueDate)}</span>
+                  {r.recurrenceDays && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>↻ every {r.recurrenceDays}d</span>}
+                </div>
+                {r.notes && <p style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--ink-soft)', margin: '6px 0 0' }}>{r.notes}</p>}
               </div>
-              <div className="actions">
-                <button className="btn ghost sm" onClick={() => { setEditing({ ...r }); setIsNew(false) }}>Edit</button>
-                <button className="btn ghost sm danger" onClick={() => remove(r.id)}>✕</button>
-              </div>
+              <button className="btn ghost sm" onClick={() => startEdit(r)}>Edit</button>
+              <button className="btn ghost sm danger" onClick={() => remove(r.id)}>✕</button>
             </div>
           )
         })}
@@ -95,44 +87,39 @@ export default function Reminders() {
 
       {done.length > 0 && (
         <>
-          <div className="section-title">Completed</div>
-          <div className="list">
+          <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--ink-faint)', margin: '26px 0 12px' }}>Completed</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {done.map((r) => (
-              <div className="card item done" key={r.id}>
-                <button className="btn ghost sm" title="Reopen" onClick={() => reopen(r.id)} style={{ fontSize: '1.1rem' }}>✅</button>
-                <div className="body"><b>{emojiFor(r.kind)} {r.title}</b></div>
-                <div className="actions"><button className="btn ghost sm danger" onClick={() => remove(r.id)}>✕</button></div>
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 15, background: 'var(--card-2)', border: '1.5px solid var(--line)', borderRadius: 18, padding: '13px 18px', opacity: 0.72 }}>
+                <button onClick={() => reopen(r.id)} title="Reopen" style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'var(--ok)', color: '#fff', cursor: 'pointer', flexShrink: 0, display: 'grid', placeItems: 'center' }}><Icon name="tick" size={14} sw={3} /></button>
+                <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 15.5, textDecoration: 'line-through', color: 'var(--ink-soft)' }}>{r.title}</div>
+                <button className="btn ghost sm danger" onClick={() => remove(r.id)}>✕</button>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {editing && (
-        <Modal title={isNew ? 'Add reminder' : 'Edit reminder'} onClose={() => setEditing(null)}>
-          <div className="form-grid">
-            <div className="field"><label>Title</label><input className="input" autoFocus value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></div>
-            <div className="grid cols-2">
-              <div className="field">
-                <label>Type</label>
-                <select className="input" value={editing.kind} onChange={(e) => setEditing({ ...editing, kind: e.target.value as ReminderKind })}>
-                  {KINDS.map((k) => <option key={k.value} value={k.value}>{k.emoji} {k.label}</option>)}
-                </select>
-              </div>
-              <div className="field"><label>Due date</label><input className="input" type="date" value={toDateInput(editing.dueDate)} onChange={(e) => setEditing({ ...editing, dueDate: fromDateInput(e.target.value) })} /></div>
+      {modal && (
+        <Modal title={modal.isNew ? 'Add reminder' : 'Edit reminder'} onClose={() => setModal(null)}>
+          <label className="lbl">Title</label>
+          <input className="input" autoFocus value={modal.draft.title} onChange={(e) => patch({ title: e.target.value })} placeholder="e.g. Tick & flea spot-on" style={{ marginBottom: 14 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div>
+              <label className="lbl">Type</label>
+              <select className="input" value={modal.draft.kind} onChange={(e) => patch({ kind: e.target.value as ReminderKind })}>
+                {KIND_OPTIONS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+              </select>
             </div>
-            <div className="field">
-              <label>Repeat every (days) — leave blank for one-off</label>
-              <input className="input" type="number" value={editing.recurrenceDays ?? ''} placeholder="e.g. 30" onChange={(e) => setEditing({ ...editing, recurrenceDays: e.target.value ? Number(e.target.value) : undefined })} />
-            </div>
-            <div className="field"><label>Notes</label><textarea className="input" rows={2} value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} /></div>
+            <div><label className="lbl">Due date</label><input className="input" type="date" value={toDateInput(modal.draft.dueDate)} onChange={(e) => patch({ dueDate: fromDateInput(e.target.value) })} /></div>
           </div>
-          <div className="modal-actions">
-            <button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
-            <button className="btn primary" onClick={save} disabled={!editing.title.trim()}>Save</button>
-          </div>
+          <label className="lbl">Repeat every (days) — blank for one-off</label>
+          <input className="input" type="number" value={modal.draft.recur} onChange={(e) => patch({ recur: e.target.value })} placeholder="e.g. 30" style={{ marginBottom: 14 }} />
+          <label className="lbl">Notes</label>
+          <textarea className="input" rows={2} value={modal.draft.notes} onChange={(e) => patch({ notes: e.target.value })} style={{ fontWeight: 500 }} />
+          <ModalActions onCancel={() => setModal(null)} onSave={save} saveDisabled={!modal.draft.title.trim()} />
         </Modal>
       )}
-    </div>
+    </>
   )
 }

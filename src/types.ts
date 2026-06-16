@@ -51,6 +51,15 @@ export interface DoctorInfo {
   notes: string
 }
 
+/** A vet / clinic contact. The first entry in `Pet.vets` is the primary vet. */
+export interface VetInfo {
+  id: string
+  name: string // "Dr. Asha Menon"
+  clinic: string // "Whiskers & Co. Clinic"
+  phone: string
+  address: string // address or free note ("MG Road — after hours")
+}
+
 export interface FoodProfile {
   brands: string[]
   likes: string[]
@@ -148,7 +157,8 @@ export interface Pet {
 
   // story & care
   story: string // how the parent got the pet (markdown-ish)
-  doctor: DoctorInfo
+  vets: VetInfo[] // first entry is the primary vet
+  doctor?: DoctorInfo // legacy single-vet field; kept for back-compat / MCP
   food: FoodProfile
   tricks: Trick[]
 

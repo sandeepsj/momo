@@ -1,45 +1,59 @@
 :root {
-  /* accent is overridden per-pet at runtime via --accent on <body> */
+  /* --accent is overridden per-pet at runtime from pet.accent */
   --accent: #f7a072;
-  --accent-soft: color-mix(in srgb, var(--accent) 18%, white);
-  --accent-ink: color-mix(in srgb, var(--accent) 55%, #3a2a1f);
+  --accent-ink: #b5613a;
+  --accent-soft: #fceadf;
+  --accent-2: #7fb7c9;
+  --mint: #5fa777;
+  --mint-soft: #e6f1e7;
+  --sky: #6c8cff;
+  --sky-soft: #e7ecfd;
 
-  --bg: #fbf7f2;
-  --bg-card: #ffffff;
-  --bg-sunken: #f3ece3;
+  --bg: #fbf4ec;
+  --card: #ffffff;
+  --card-2: #fbf6ef;
+  --sunken: #f5ece0;
+
   --ink: #2c2622;
-  --ink-soft: #6f655d;
-  --ink-faint: #a89e95;
-  --line: #ece3d8;
-  --line-strong: #ddd0c0;
+  --ink-soft: #7c6f64;
+  --ink-faint: #ab9f93;
+  --line: #efe3d4;
+  --line-strong: #e4d5c2;
 
-  --ok: #57a773;
+  --ok: #5fa777;
   --warn: #e0a458;
-  --danger: #d76a6a;
+  --danger: #d9756b;
 
-  --radius: 16px;
-  --radius-sm: 10px;
-  --radius-lg: 24px;
-  --shadow: 0 1px 2px rgba(60, 40, 20, 0.04), 0 8px 24px rgba(60, 40, 20, 0.06);
-  --shadow-sm: 0 1px 2px rgba(60, 40, 20, 0.06);
+  --shadow: 0 2px 4px rgba(120, 80, 40, 0.05), 0 18px 44px -16px rgba(120, 80, 40, 0.2);
+  --shadow-sm: 0 1px 2px rgba(120, 80, 40, 0.07), 0 10px 22px -12px rgba(120, 80, 40, 0.18);
+  --sticker: 0 1px 0 var(--line-strong), 0 8px 18px -10px rgba(120, 80, 40, 0.22);
+  --dot: rgba(120, 80, 40, 0.07);
 
-  --font: 'Nunito', ui-rounded, 'Segoe UI', system-ui, sans-serif;
-
-  --sidebar-w: 232px;
+  --font-display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1815;
-    --bg-card: #262019;
-    --bg-sunken: #201b15;
-    --ink: #f3ece3;
-    --ink-soft: #c3b6a8;
-    --ink-faint: #8a7d6f;
-    --line: #352c23;
-    --line-strong: #463a2c;
-    --accent-soft: color-mix(in srgb, var(--accent) 26%, #262019);
-    --accent-ink: color-mix(in srgb, var(--accent) 70%, #f3ece3);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-  }
+[data-theme='dark'] {
+  --accent-ink: #fbc79f;
+  --accent-soft: rgba(247, 160, 114, 0.16);
+  --accent-2: #5e97a8;
+  --mint-soft: rgba(95, 167, 119, 0.16);
+  --sky-soft: rgba(108, 140, 255, 0.18);
+
+  --bg: #16110d;
+  --card: #221a14;
+  --card-2: #2a2018;
+  --sunken: #1c150f;
+
+  --ink: #f4ece2;
+  --ink-soft: #bcad9c;
+  --ink-faint: #8a7b6b;
+  --line: #33271d;
+  --line-strong: #41331f;
+
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.34), 0 22px 50px -18px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --sticker: 0 1px 0 rgba(0, 0, 0, 0.4), 0 10px 22px -10px rgba(0, 0, 0, 0.6);
+  --dot: rgba(255, 236, 210, 0.05);
 }

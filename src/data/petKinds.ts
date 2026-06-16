@@ -42,7 +42,7 @@ export const SPECIES_PRESETS: SpeciesPreset[] = [
     species: 'rabbit',
     label: 'Rabbit',
     emoji: '🐰',
-    accent: '#b5ead7',
+    accent: '#9FD9B8',
     defaultReminders: [
       { kind: 'vaccination', title: 'RHDV / Myxomatosis vaccine', everyDays: 365 },
       { kind: 'vet-checkup', title: 'Nail & teeth check', everyDays: 60 },
@@ -52,7 +52,7 @@ export const SPECIES_PRESETS: SpeciesPreset[] = [
     species: 'bird',
     label: 'Bird',
     emoji: '🐦',
-    accent: '#ffd6a5',
+    accent: '#F6C667',
     defaultReminders: [
       { kind: 'vet-checkup', title: 'Avian vet check-up', everyDays: 180 },
     ],
@@ -61,7 +61,7 @@ export const SPECIES_PRESETS: SpeciesPreset[] = [
     species: 'other',
     label: 'Other',
     emoji: '🐾',
-    accent: '#c3b1e1',
+    accent: '#C3B1E1',
     defaultReminders: [
       { kind: 'vet-checkup', title: 'Vet check-up', everyDays: 365 },
     ],
@@ -95,7 +95,7 @@ export function newPet(name: string, species: Species, nowIso: string): Pet {
     birthday: '',
     adoptionDate: '',
     story: '',
-    doctor: { name: '', clinic: '', phone: '', address: '', notes: '' },
+    vets: [],
     food: { brands: [], likes: [], dislikes: [], allergies: [], diet: '', schedule: [] },
     tricks: [],
     events: [],
